@@ -1,28 +1,31 @@
 const fs = require("fs");
-const axios = require('axios').default
-
-console.log('test');
+const axios = require("axios").default;
 
 async function generateJsonDB() {
-  // TODO: fetch data pokemon api dan buatlah JSON data sesuai dengan requirement.
-  // json file bernama db.json. pastikan ketika kalian menjalankan npm run start
-  // dan ketika akses url http://localhost:3000/pokemon akan muncul seluruh data
-  // pokemon yang telah kalian parsing dari public api pokemon
   const pokemonApiURL = "https://pokeapi.co/api/v2/pokemon/?limit=100";
 
-  // 1. FETCH API
-  const response = await axios.get(pokemonApiURL)
-  console.log(response.data.results);
+  try {
+    // 1. Fetch daftar Pokemon
+    const response = await axios.get(pokemonApiURL);
 
-  // 2. Write data ke db.json
-  const sample = {
-    "pokemon": []
+    // 2. Ambil detail untuk setiap Pokemon, termasuk gambar dan URL
+    const pokemonList = await Promise.all(
+      response.data.results.map(async (pokemon) => {
+        const details = await axios.get(pokemon.url);
+        return {
+          name: details.data.name,
+          image: details.data.sprites.front_default, // Menambahkan URL gambar
+        };
+      })
+    );
+
+    // 3. Tulis data ke db.json
+    const sample = { pokemon: pokemonList };
+    fs.writeFileSync("db.json", JSON.stringify(sample, null, 4));
+    console.log("Pokémon data has been generated and saved to db.json");
+  } catch (error) {
+    console.error("Error fetching data from PokeAPI:", error.message);
   }
-
-  sample.pokemon = response.data.results
-
-  fs.writeFileSync('db.json', JSON.stringify(sample, null, 2))
-
 }
 
 generateJsonDB();
